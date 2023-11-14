@@ -11,7 +11,15 @@ export const EP_REGEX =
 export const SEASON_REGEX =
 	/^(?<title>.+?)[_.\s-]+(?<season>S\d+)(?:[_.\s-]*?(?<seasonmax>S?\d+))?(?=[_.\s](?!E\d+))/i;
 export const MOVIE_REGEX =
-	/^(?<title>.+?)[_.\s][[(]?(?<year>\d{4})[)\]]?(?![pi])/i;
+	/^(?<title>.+?)[_.\s][[(]?((?<year>\d{4})[)\]]?(?![pi])|(\d{3,4}[ip]))/i;
+
+export const GROUP_REGEX = /$(?<=(?:-)(?<group>[\w\040]+)(?:\.\w+)?)/i;
+export const RES_REGEX = /\b(?<res>\d{3,4}[ip])\b/i;
+export const IMDB_REGEX =
+	/\b(?:(?<idtag>imdb?(id)?)[-=](?<imdbid>[^}_.\s]+)?\b)/i;
+
+export const PATH_REGEX =
+	/^(?:.+)[/\\](?<parent>.+)[/\\](?<child>(?:S(?:eason[ ]?)?\d{1,}))((?:[/\\]?)(?<filename>[^/\\]+\.\w{3})?)/i;
 
 export const VIDEO_EXTENSIONS = [".mkv", ".mp4", ".avi"];
 
