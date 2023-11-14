@@ -201,38 +201,20 @@ export async function loadTorrentDirLight(): Promise<Searchee[]> {
 export async function getTorrentByFuzzyName(
 	name: string
 ): Promise<null | Metafile> {
+	const tokenizeName = (tname) =>
+		tname
+			.split(/\W+/)
+			.map((x) => x.toLowerCase())
+			.sort();
+	const createComparableTorrent = (x) => tokenizeName(x).join("");
+
+	const fullMatch = createComparableTorrent(name);
 	const allNames = await db("torrent").select("name", "file_path");
-	const fullMatch = reformatTitleForSearching(name)
-		.replace(/[^a-z0-9]/gi, "")
-		.toLowerCase();
 
-	// Attempt to filter torrents in DB to match incoming torrent before fuzzy check
-	let filteredNames = [];
-	if (fullMatch) {
-		filteredNames = allNames.filter((dbName) => {
-			const dbMatch = reformatTitleForSearching(dbName.name)
-				.replace(/[^a-z0-9]/gi, "")
-				.toLowerCase();
-			if (!dbMatch) return false;
-			return fullMatch === dbMatch;
-		});
-	}
-
-	// If none match, proceed with fuzzy name check on all names.
-	filteredNames = filteredNames.length > 0 ? filteredNames : allNames;
-
-	// @ts-expect-error fuse types are confused
-	const potentialMatches = new Fuse(filteredNames, {
-		keys: ["name"],
-		distance: 6,
-		threshold: 0.25,
-	}).search(name);
-
-	// Valid matches exist
-	if (potentialMatches.length === 0) return null;
-
-	const firstMatch = potentialMatches[0];
-	return parseTorrentFromFilename(firstMatch.item.file_path);
+	const match = allNames.find(
+		(x) => createComparableTorrent(x.name) === fullMatch
+	);
+	return match ? parseTorrentFromFilename(match.file_path) : null;
 }
 
 export async function getTorrentByCriteria(
