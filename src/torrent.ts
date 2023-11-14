@@ -1,5 +1,4 @@
 import fs, { promises as fsPromises } from "fs";
-import Fuse from "fuse.js";
 import fetch, { Response } from "node-fetch";
 import path, { join } from "path";
 import { inspect } from "util";
@@ -11,7 +10,9 @@ import { Metafile } from "./parseTorrent.js";
 import { Result, resultOf, resultOfErr } from "./Result.js";
 import { getRuntimeConfig } from "./runtimeConfig.js";
 import { createSearcheeFromTorrentFile, Searchee } from "./searchee.js";
-import { reformatTitleForSearching, stripExtension } from "./utils.js";
+import { stripExtension } from "./utils.js";
+import { closest, distance } from "fastest-levenshtein";
+import { getFileConfig } from "./configuration.js";
 
 export interface TorrentLocator {
 	infoHash?: string;
@@ -198,23 +199,38 @@ export async function loadTorrentDirLight(): Promise<Searchee[]> {
 	return searchees;
 }
 
+const tokenizeName = (tname) =>
+	tname
+		.split(/[.\s-]+/)
+		.map((x) => x.toLowerCase())
+		.sort();
+const createComparableTorrent = (x) => tokenizeName(x).join("");
+
+// const SIMILARITY_THRESHOLD = 92;
+
 export async function getTorrentByFuzzyName(
 	name: string
 ): Promise<null | Metafile> {
-	const tokenizeName = (tname) =>
-		tname
-			.split(/\W+/)
-			.map((x) => x.toLowerCase())
-			.sort();
-	const createComparableTorrent = (x) => tokenizeName(x).join("");
+	const searchTarget = createComparableTorrent(name);
+	const allTorrentNames = await db("torrent").select("name", "file_path");
 
-	const fullMatch = createComparableTorrent(name);
-	const allNames = await db("torrent").select("name", "file_path");
+	const searchMap = {};
 
-	const match = allNames.find(
-		(x) => createComparableTorrent(x.name) === fullMatch
-	);
-	return match ? parseTorrentFromFilename(match.file_path) : null;
+	allTorrentNames.forEach((x) => {
+		searchMap[createComparableTorrent(x.name)] = x;
+	});
+
+	const closestMatch = closest(searchTarget, Object.keys(searchMap));
+
+	const dissimilarityPct =
+		distance(searchTarget, closestMatch) / searchTarget.length;
+	const similarityPct = 100 * (1 - dissimilarityPct);
+
+	if (similarityPct >= (await getFileConfig()).levenshtein) {
+		return parseTorrentFromFilename(searchMap[closestMatch].file_path);
+	}
+
+	return null;
 }
 
 export async function getTorrentByCriteria(

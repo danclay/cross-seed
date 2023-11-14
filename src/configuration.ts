@@ -42,6 +42,7 @@ interface FileConfig {
 	snatchTimeout?: string;
 	searchTimeout?: string;
 	searchLimit?: number;
+	levenshtein?: number;
 }
 
 interface GenerateConfigParams {
@@ -81,9 +82,9 @@ export function generateConfig({
 }
 
 export async function getFileConfig(): Promise<FileConfig> {
-	if (process.env.DOCKER_ENV === "true") {
-		generateConfig({ docker: true });
-	}
+	//if (process.env.DOCKER_ENV === "true") {
+	//	generateConfig({ docker: true });
+	//}
 
 	const configPath = path.join(appDir(), "config.js");
 
