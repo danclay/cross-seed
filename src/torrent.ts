@@ -2,10 +2,10 @@ import fs, { promises as fsPromises } from "fs";
 import fetch, { Response } from "node-fetch";
 import path, { join } from "path";
 import { inspect } from "util";
-import { USER_AGENT } from "./constants.js";
+import { DATA_EXTENSIONS, USER_AGENT, VIDEO_EXTENSIONS } from "./constants.js";
 import { db } from "./db.js";
 import { CrossSeedError } from "./errors.js";
-import { logger, logOnce } from "./logger.js";
+import { Label, logger, logOnce } from "./logger.js";
 import { Metafile } from "./parseTorrent.js";
 import { Result, resultOf, resultOfErr } from "./Result.js";
 import { getRuntimeConfig } from "./runtimeConfig.js";
@@ -206,7 +206,17 @@ const tokenizeName = (tname) =>
 		.sort();
 const createComparableTorrent = (x) => tokenizeName(x).join("");
 
-// const SIMILARITY_THRESHOLD = 92;
+function removeExtensionsFromName(name: string) {
+	const extensionsToRemove = [...VIDEO_EXTENSIONS, ...DATA_EXTENSIONS];
+	extensionsToRemove.forEach((extension) => {
+		if (name.endsWith(extension)) {
+			return name.endsWith(extension)
+				? name.slice(0, -1 * extension.length)
+				: name;
+		}
+	});
+	return name;
+}
 
 export async function getTorrentByFuzzyName(
 	name: string
@@ -217,19 +227,29 @@ export async function getTorrentByFuzzyName(
 	const searchMap = {};
 
 	allTorrentNames.forEach((x) => {
-		searchMap[createComparableTorrent(x.name)] = x;
+		searchMap[createComparableTorrent(removeExtensionsFromName(x.name))] =
+			x;
 	});
 
 	const closestMatch = closest(searchTarget, Object.keys(searchMap));
+	const calcDistanceFrom = distance(searchTarget, closestMatch);
 
-	const dissimilarityPct =
-		distance(searchTarget, closestMatch) / searchTarget.length;
+	const dissimilarityPct = calcDistanceFrom / searchTarget.length;
 	const similarityPct = 100 * (1 - dissimilarityPct);
+	const distanceMax = Math.max(
+		(await getFileConfig()).levenshtein,
+		Math.min(0.1 * searchTarget.length, 8)
+	);
 
-	if (similarityPct >= (await getFileConfig()).levenshtein) {
-		return parseTorrentFromFilename(searchMap[closestMatch].file_path);
+	if (distanceMax >= calcDistanceFrom - 2) {
+		logger.verbose({
+			label: Label.DECIDE,
+			message: `[levenshtein(${distanceMax})] -> ${searchMap[closestMatch].name}\n\t\t -> ${name}\n\t\t\t = ${similarityPct}% (${calcDistanceFrom})`,
+		});
+		if (distanceMax >= calcDistanceFrom) {
+			return parseTorrentFromFilename(searchMap[closestMatch].file_path);
+		}
 	}
-
 	return null;
 }
 
