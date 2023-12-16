@@ -2,7 +2,15 @@ import fs, { promises as fsPromises } from "fs";
 import fetch, { Response } from "node-fetch";
 import path, { join } from "path";
 import { inspect } from "util";
-import { DATA_EXTENSIONS, USER_AGENT, VIDEO_EXTENSIONS } from "./constants.js";
+import {
+	DATA_EXTENSIONS,
+	EP_REGEX,
+	GROUP_REGEX,
+	MOVIE_REGEX,
+	SEASON_REGEX,
+	USER_AGENT,
+	VIDEO_EXTENSIONS,
+} from "./constants.js";
 import { db } from "./db.js";
 import { CrossSeedError } from "./errors.js";
 import { Label, logger, logOnce } from "./logger.js";
@@ -222,7 +230,21 @@ export async function getTorrentByFuzzyName(
 	name: string
 ): Promise<null | Metafile> {
 	const searchTarget = createComparableTorrent(name);
-	const allTorrentNames = await db("torrent").select("name", "file_path");
+	const searchTerm = EP_REGEX.test(name)
+		? GROUP_REGEX.test(name)
+			? `${name.match(EP_REGEX)[0]}%${name.match(GROUP_REGEX)[0]}`
+			: name.match(EP_REGEX)[0]
+		: SEASON_REGEX.test(name)
+		? GROUP_REGEX.test(name)
+			? `${name.match(SEASON_REGEX)[0]}%${name.match(GROUP_REGEX)[0]}`
+			: name.match(SEASON_REGEX)[0]
+		: GROUP_REGEX.test(name)
+		? `${name.match(MOVIE_REGEX)[0]}%${name.match(GROUP_REGEX)[0]}`
+		: name.match(MOVIE_REGEX)[0];
+
+	const allTorrentNames = await db("torrent")
+		.select("name", "file_path")
+		.where("name", "LIKE", searchTerm);
 
 	const searchMap = {};
 
