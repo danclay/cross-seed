@@ -273,6 +273,7 @@ export default class Deluge implements TorrentClient {
 				return InjectionResult.FAILURE;
 			}
 		} catch (injectResult) {
+			console.error(injectResult);
 			if (injectResult.includes("label.set_torrent")) {
 				logger.warning({
 					label: Label.DELUGE,
