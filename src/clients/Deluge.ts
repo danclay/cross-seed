@@ -1,3 +1,4 @@
+import ms from "ms";
 import { InjectionResult } from "../constants.js";
 import { CrossSeedError } from "../errors.js";
 import { Label, logger } from "../logger.js";
@@ -128,6 +129,13 @@ export default class Deluge implements TorrentClient {
 
 		let response: Response, json: DelugeJSON<ResultType>;
 		const id = Math.floor(Math.random() * 0x7fffffff);
+		const abortController = new AbortController();
+
+		setTimeout(
+			() => void abortController.abort(),
+			ms("10 seconds")
+		).unref();
+
 		try {
 			response = await fetch(href, {
 				body: JSON.stringify({
@@ -137,18 +145,22 @@ export default class Deluge implements TorrentClient {
 				}),
 				method: "POST",
 				headers,
+				signal: abortController.signal,
 			});
 		} catch (networkError) {
+			if (networkError.name === "AbortError") {
+				throw new Error(
+					`Deluge method ${method} timed out after 10 seconds`
+				);
+			}
 			// @ts-expect-error needs es2022 target (tsconfig)
 			throw new Error(`Failed to connect to Deluge at ${href}`, {
 				cause: networkError,
 			});
 		}
-		const text = await response.clone().text();
 		try {
 			json = await response.json();
 		} catch (jsonParseError) {
-			console.log("JSON RESPONSE:", text);
 			throw new Error(
 				`Deluge method ${method} response was non-JSON ${jsonParseError}`
 			);
@@ -276,8 +288,7 @@ export default class Deluge implements TorrentClient {
 				return InjectionResult.FAILURE;
 			}
 		} catch (injectResult) {
-			console.error(injectResult);
-			if (injectResult.includes("label.set_torrent")) {
+			if (injectResult.message.includes("label.set_torrent")) {
 				logger.warn({
 					label: Label.DELUGE,
 					message: `Labeling failure: ${newTorrent.name} (${newTorrent.infoHash})`,
