@@ -144,6 +144,7 @@ export default class Deluge implements TorrentClient {
 				cause: networkError,
 			});
 		}
+		console.log(`JSON RESPONSE: ${response}`);
 		try {
 			json = await response.json();
 		} catch (jsonParseError) {
@@ -199,6 +200,7 @@ export default class Deluge implements TorrentClient {
 				infoHash,
 				label,
 			]);
+			console.log(`setResult: ${setResult}`);
 			if (setResult.error?.code === DelugeErrorCode.RPC_FAIL) {
 				await this.call<void>("label.add", [label]);
 				await this.call<void>("label.set_torrent", [infoHash, label]);
