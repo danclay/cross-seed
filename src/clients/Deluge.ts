@@ -144,10 +144,11 @@ export default class Deluge implements TorrentClient {
 				cause: networkError,
 			});
 		}
-		console.log("JSON RESPONSE", await response.clone().text());
+		const text = await response.clone().text();
 		try {
 			json = await response.json();
 		} catch (jsonParseError) {
+			console.log("JSON RESPONSE:", text);
 			throw new Error(
 				`Deluge method ${method} response was non-JSON ${jsonParseError}`
 			);
