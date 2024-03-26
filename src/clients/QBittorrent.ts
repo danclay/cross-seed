@@ -318,7 +318,7 @@ export default class QBittorrent implements TorrentClient {
 			} else {
 				formData.append("contentLayout", contentLayout);
 				formData.append("skip_checking", "true");
-				formData.append("paused", qbittorrentInjectPaused.toString());
+				formData.append("paused", "true"); // TODO to lazy to figure out how to do this otherwise, just need it paused rn
 			}
 
 			// for some reason the parser parses the last kv pair incorrectly
