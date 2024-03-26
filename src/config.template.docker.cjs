@@ -159,6 +159,11 @@ module.exports = {
 	qbittorrentUrl: undefined,
 
 	/**
+	 * Whether to inject paused
+	 */
+	qbittorrentInjectPaused: false,
+
+	/**
 	 * The url of your Transmission RPC interface.
 	 * Usually ends with "/transmission/rpc".
 	 * Only relevant with action: "inject".

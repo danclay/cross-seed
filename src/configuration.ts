@@ -30,6 +30,7 @@ interface FileConfig {
 	torrentDir?: string;
 	torznab?: string[];
 	qbittorrentUrl?: string;
+	qbittorrentInjectPaused?: boolean;
 	transmissionRpcUrl?: string;
 	delugeRpcUrl?: string;
 	duplicateCategories?: boolean;

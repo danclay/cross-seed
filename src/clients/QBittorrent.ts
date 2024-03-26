@@ -263,7 +263,7 @@ export default class QBittorrent implements TorrentClient {
 		searchee: Searchee,
 		path?: string
 	): Promise<InjectionResult> {
-		const { duplicateCategories, skipRecheck, dataCategory } =
+		const { duplicateCategories, skipRecheck, dataCategory, qbittorrentInjectPaused } =
 			getRuntimeConfig();
 		const filename = `${newTorrent.getFileSystemSafeName()}.cross-seed.torrent`;
 		const tempFilepath = join(appDir(), TORRENT_CACHE_FOLDER, filename);
@@ -318,7 +318,7 @@ export default class QBittorrent implements TorrentClient {
 			} else {
 				formData.append("contentLayout", contentLayout);
 				formData.append("skip_checking", "true");
-				formData.append("paused", "false");
+				formData.append("paused", qbittorrentInjectPaused.toString());
 			}
 
 			// for some reason the parser parses the last kv pair incorrectly
